@@ -26,6 +26,7 @@ async def import_kaggle_dataset():
     
     # Path to the dataset
     dataset_path = Path("data/kaggle_resume_dataset/Resume.csv")
+    resume_files_dir = Path("data/kaggle_resume_dataset/data")  # Folder with actual resume files
     
     if not dataset_path.exists():
         logger.error(f"Dataset not found at {dataset_path}")
@@ -33,6 +34,15 @@ async def import_kaggle_dataset():
         logger.info("https://www.kaggle.com/datasets/snehaanbhawal/resume-dataset")
         logger.info("And place Resume.csv in data/kaggle_resume_dataset/")
         return
+    
+    # Check if resume files directory exists
+    has_resume_files = resume_files_dir.exists()
+    if not has_resume_files:
+        logger.warning(f"Resume files directory not found at {resume_files_dir}")
+        logger.warning("Will process text-only data from CSV")
+        logger.info("For full processing with actual files, also extract the 'data' folder from Kaggle dataset")
+    else:
+        logger.info(f"✓ Found resume files directory: {resume_files_dir}")
     
     # Read the dataset
     logger.info(f"Reading dataset from {dataset_path}")
@@ -69,27 +79,51 @@ async def import_kaggle_dataset():
                 
                 logger.info(f"\nProcessing resume {idx + 1}/{len(df)} - Category: {category}")
                 
-                # Create temporary file
-                temp_file = Path(settings.UPLOAD_DIR) / f"kaggle_resume_{idx}.txt"
-                temp_file.parent.mkdir(parents=True, exist_ok=True)
+                # Try to find actual resume file first
+                file_path = None
+                file_type = "txt"
                 
-                with open(temp_file, 'w', encoding='utf-8') as f:
-                    f.write(resume_text)
+                if has_resume_files:
+                    # Look for resume file in category folder
+                    category_folder = resume_files_dir / category.upper().replace(' ', '')
+                    if category_folder.exists():
+                        # Find any file with matching index or first file
+                        resume_files = list(category_folder.glob("*"))
+                        if resume_files and idx < len(resume_files):
+                            file_path = resume_files[idx % len(resume_files)]
+                            file_type = file_path.suffix[1:] if file_path.suffix else "txt"
+                            logger.info(f"Found actual resume file: {file_path.name}")
                 
-                # Parse resume
-                parsed_data = await parser.parse_resume(temp_file, db)
+                # If no actual file found, create temporary text file
+                if not file_path:
+                    temp_file = Path(settings.UPLOAD_DIR) / f"kaggle_resume_{idx}.txt"
+                    temp_file.parent.mkdir(parents=True, exist_ok=True)
+                    
+                    with open(temp_file, 'w', encoding='utf-8') as f:
+                        f.write(resume_text)
+                    
+                    file_path = temp_file
+                    file_type = "txt"
+                
+                # Parse resume using the actual file
+                parsed_data = await parser.parse_resume(file_path, db)
                 
                 # Create resume record
                 resume = Resume(
-                    file_name=f"kaggle_resume_{idx}.txt",
-                    file_type="txt",
-                    file_size=len(resume_text),
-                    file_path=str(temp_file),
+                    file_name=file_path.name,
+                    file_type=file_type,
+                    file_size=file_path.stat().st_size if file_path.exists() else len(resume_text),
+                    file_path=str(file_path),
                     file_hash=parsed_data.get('file_hash'),
-                    raw_text=resume_text,
+                    raw_text=resume_text,  # Use CSV text as fallback
                     structured_data=parsed_data.get('structured_data'),
                     processing_status=ProcessingStatus.COMPLETED,
-                    metadata={'source': 'kaggle', 'category': category, 'index': idx}
+                    metadata={
+                        'source': 'kaggle',
+                        'category': category,
+                        'index': idx,
+                        'has_actual_file': file_path != temp_file if 'temp_file' in locals() else True
+                    }
                 )
                 
                 db.add(resume)
@@ -99,7 +133,7 @@ async def import_kaggle_dataset():
                 logger.info(f"Enhancing resume {resume.id} with AI...")
                 enhancements = await enhancer.enhance_resume(
                     resume.id,
-                    resume_text,
+                    parsed_data.get('raw_text', resume_text),  # Use parsed text if available
                     parsed_data.get('structured_data', {}),
                     db
                 )
@@ -111,7 +145,7 @@ async def import_kaggle_dataset():
                 logger.info(f"Indexing resume {resume.id} in Elasticsearch...")
                 await search_client.index_resume(
                     resume_id=resume.id,
-                    text=resume_text,
+                    text=parsed_data.get('raw_text', resume_text),
                     structured_data=parsed_data.get('structured_data', {}),
                     embedding=parsed_data.get('embedding', [])
                 )
@@ -138,6 +172,7 @@ async def import_kaggle_dataset():
     logger.info(f"Total resumes in dataset: {len(df)}")
     logger.info(f"Successfully processed: {processed_count}")
     logger.info(f"Failed: {failed_count}")
+    logger.info(f"Processing mode: {'With actual files' if has_resume_files else 'Text-only from CSV'}")
     logger.info("="*60)
 
 

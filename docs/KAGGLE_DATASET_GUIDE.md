@@ -19,11 +19,18 @@ This guide explains how to download and import the Kaggle resume dataset into th
 
 2. **Extract the dataset**:
    - Unzip the downloaded file (e.g., `archive.zip`)
-   - Find the `Resume.csv` file inside
+   - You'll get TWO important items:
+     - `Resume.csv` - Contains resume text and category labels
+     - `data/` folder - Contains actual resume files (PDF, DOCX, images) organized by category
 
 3. **Place in project directory**:
    ```
-   D:\gemini hackathon\resume_parser_ai\data\kaggle_resume_dataset\Resume.csv
+   D:\gemini hackathon\resume_parser_ai\data\kaggle_resume_dataset\
+   ├── Resume.csv
+   └── data\
+       ├── ACCOUNTANT\
+       ├── ADVOCATE\
+       └── ... (more categories)
    ```
    
    Create the folders if they don't exist:
@@ -33,8 +40,17 @@ This guide explains how to download and import the Kaggle resume dataset into th
    New-Item -ItemType Directory -Force -Path "data\kaggle_resume_dataset"
    ```
 
-4. **Copy the Resume.csv file**:
-   - Simply copy `Resume.csv` into the `data\kaggle_resume_dataset\` folder
+4. **Copy BOTH the CSV and data folder**:
+   - Copy `Resume.csv` into `data\kaggle_resume_dataset\`
+   - Copy the entire `data\` folder into `data\kaggle_resume_dataset\`
+
+**Important**: Having the actual resume files allows the system to:
+- ✅ Test multi-format parsing (PDF, DOCX, images)
+- ✅ Test OCR on image resumes
+- ✅ Process actual document layouts and formatting
+- ✅ Full document processing pipeline validation
+
+If you only have `Resume.csv`, the script will still work but process text-only data.
 
 ### Step 2: Import into Database
 

@@ -15,8 +15,15 @@
 ### 3️⃣ Extract the ZIP
 ```
 📦 archive.zip
-   └── 📄 Resume.csv  ← This is what you need!
+   ├── 📄 Resume.csv          ← Resume text data
+   └── 📁 data/               ← Resume files (PDF/DOCX/Images)
+       ├── ACCOUNTANT/
+       ├── ADVOCATE/
+       ├── AGRICULTURE/
+       └── ... (more categories)
 ```
+
+**Important**: You need BOTH the CSV file AND the data folder!
 
 ### 4️⃣ Create Folder Structure
 In your project directory, create this folder:
@@ -36,10 +43,15 @@ mkdir data\kaggle_resume_dataset
 mkdir -p data/kaggle_resume_dataset
 ```
 
-### 5️⃣ Copy Resume.csv
-Copy the extracted `Resume.csv` file to:
+### 5️⃣ Copy Files
+Copy BOTH the Resume.csv AND the data folder:
 ```
-D:\gemini hackathon\resume_parser_ai\data\kaggle_resume_dataset\Resume.csv
+D:\gemini hackathon\resume_parser_ai\data\kaggle_resume_dataset\
+├── Resume.csv              ← Copy this
+└── data\                   ← Copy this entire folder
+    ├── ACCOUNTANT\
+    ├── ADVOCATE\
+    └── ...
 ```
 
 Your folder structure should look like:
@@ -48,11 +60,23 @@ resume_parser_ai/
 ├── app/
 ├── data/
 │   └── kaggle_resume_dataset/
-│       └── Resume.csv          ← File should be here
+│       ├── Resume.csv              ← CSV with text data
+│       └── data/                   ← Actual resume files
+│           ├── ACCOUNTANT/
+│           │   ├── resume1.pdf
+│           │   ├── resume2.docx
+│           │   └── ...
+│           ├── ADVOCATE/
+│           ├── AGRICULTURE/
+│           └── ... (more categories)
 ├── scripts/
 │   └── import_kaggle_dataset.py
 └── ...
 ```
+
+**Note**: The script works with BOTH modes:
+- ✅ **With resume files**: Processes actual PDFs/DOCX files (full document processing pipeline)
+- ✅ **Text-only**: If you only have Resume.csv, it will still work (uses text extraction from CSV)
 
 ### 6️⃣ Run Import Script
 ```bash
