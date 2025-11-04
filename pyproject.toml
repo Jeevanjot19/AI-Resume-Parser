@@ -1,0 +1,23 @@
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+addopts = "-v --cov=app --cov-report=term-missing"
+asyncio_mode = "auto"
+
+[coverage.run]
+source = ["app"]
+omit = [
+    "tests/*",
+    "app/migrations/*",
+    "app/alembic/*"
+]
+
+[coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "pass",
+    "raise ImportError"
+]
