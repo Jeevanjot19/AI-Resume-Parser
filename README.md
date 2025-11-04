@@ -82,7 +82,18 @@ docker-compose up -d
 docker-compose exec api alembic upgrade head
 ```
 
-### 5. Access API
+### 5. Import Kaggle Dataset (Optional)
+```bash
+# Download the dataset
+python scripts/download_kaggle_dataset.py
+
+# Import into database (processes first 50 resumes by default)
+python scripts/import_kaggle_dataset.py
+```
+
+📖 See [Kaggle Dataset Guide](docs/KAGGLE_DATASET_GUIDE.md) for detailed instructions.
+
+### 6. Access API
 - **API Docs**: http://localhost:8000/api/v1/docs
 - **Health Check**: http://localhost:8000/api/v1/health
 - **Grafana**: http://localhost:3000 (admin/admin)
