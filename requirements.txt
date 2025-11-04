@@ -72,6 +72,11 @@ flake8>=6.0.0
 mypy>=1.4.1
 pre-commit>=3.4.0
 
+# Data Processing
+pandas>=2.0.0
+numpy>=1.24.0
+kaggle>=1.5.16
+
 # Documentation
 mkdocs>=1.5.3
 mkdocs-material>=9.4.6
