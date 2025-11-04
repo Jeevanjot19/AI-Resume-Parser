@@ -83,11 +83,15 @@ docker-compose exec api alembic upgrade head
 ```
 
 ### 5. Import Kaggle Dataset (Optional)
-```bash
-# Download the dataset
-python scripts/download_kaggle_dataset.py
 
-# Import into database (processes first 50 resumes by default)
+**Option A - Manual Download (Recommended):**
+1. Download from https://www.kaggle.com/datasets/snehaanbhawal/resume-dataset
+2. Extract and copy `Resume.csv` to `data\kaggle_resume_dataset\Resume.csv`
+3. Run: `python scripts/import_kaggle_dataset.py`
+
+**Option B - Automated Download:**
+```bash
+python scripts/download_kaggle_dataset.py  # Requires Kaggle API key
 python scripts/import_kaggle_dataset.py
 ```
 

@@ -11,7 +11,46 @@ This guide explains how to download and import the Kaggle resume dataset into th
 
 ## Quick Start
 
-### Option 1: Automated Download (Recommended)
+### Step 1: Download Dataset (Manual - Recommended)
+
+1. **Visit the dataset page**:
+   - Go to https://www.kaggle.com/datasets/snehaanbhawal/resume-dataset
+   - Click the **"Download"** button (you'll need a free Kaggle account)
+
+2. **Extract the dataset**:
+   - Unzip the downloaded file (e.g., `archive.zip`)
+   - Find the `Resume.csv` file inside
+
+3. **Place in project directory**:
+   ```
+   D:\gemini hackathon\resume_parser_ai\data\kaggle_resume_dataset\Resume.csv
+   ```
+   
+   Create the folders if they don't exist:
+   ```bash
+   mkdir -p data/kaggle_resume_dataset
+   # On Windows PowerShell:
+   New-Item -ItemType Directory -Force -Path "data\kaggle_resume_dataset"
+   ```
+
+4. **Copy the Resume.csv file**:
+   - Simply copy `Resume.csv` into the `data\kaggle_resume_dataset\` folder
+
+### Step 2: Import into Database
+
+Once the file is in place, run:
+
+```bash
+python scripts/import_kaggle_dataset.py
+```
+
+That's it! The script will automatically find and process the dataset.
+
+---
+
+## Alternative: Automated Download (Optional)
+
+If you prefer to use the Kaggle API:
 
 1. **Setup Kaggle API credentials**:
    - Go to https://www.kaggle.com/settings/account
@@ -28,19 +67,6 @@ This guide explains how to download and import the Kaggle resume dataset into th
    ```
 
 3. **Import into database**:
-   ```bash
-   python scripts/import_kaggle_dataset.py
-   ```
-
-### Option 2: Manual Download
-
-1. **Download manually**:
-   - Visit https://www.kaggle.com/datasets/snehaanbhawal/resume-dataset
-   - Click "Download" button
-   - Extract the ZIP file
-   - Place `Resume.csv` in `data/kaggle_resume_dataset/`
-
-2. **Import into database**:
    ```bash
    python scripts/import_kaggle_dataset.py
    ```
