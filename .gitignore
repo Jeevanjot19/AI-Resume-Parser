@@ -47,7 +47,7 @@ docker-compose.override.yml
 
 # Project specific
 uploads/
-models/
+/models/
 *.pth
 
 # System Files
