@@ -1,78 +1,131 @@
 # AI-Powered Resume Parser
 
-An intelligent resume parsing system built using FastAPI, AI/ML technologies, and modern architecture practices.
+Production-ready AI-powered resume parsing and job matching system with semantic search capabilities.
 
 ## Features
 
-- Multi-format resume parsing (PDF, DOCX, TXT, Images)
-- AI-powered data extraction with context understanding
-- Resume-Job matching with detailed scoring
-- RESTful API with OpenAPI 3.1 specification
-- Scalable architecture with Docker support
+### Core Functionality
+- **Multi-format Support**: Parse resumes in PDF, DOCX, TXT, and image formats
+- **AI-Powered Extraction**: Advanced NER for extracting personal info, skills, experience, education
+- **Semantic Search**: Vector embeddings for intelligent resume search
+- **Job Matching**: Multi-dimensional scoring algorithm (85%+ accuracy target)
+- **Quality Analysis**: AI-driven resume quality assessment and improvement suggestions
+- **Career Path Analysis**: Industry classification and career level determination
+
+### Technical Highlights
+- **Async Processing**: Celery task queue for background resume processing
+- **High Performance**: Redis caching, <5s response time target
+- **Scalable Architecture**: Docker Compose orchestration, Kubernetes-ready
+- **Comprehensive Monitoring**: Prometheus, Grafana, ELK stack, Sentry integration
+- **Production-Ready**: Health checks, error handling, logging, CI/CD pipeline
 
 ## Tech Stack
 
-- **Backend:** FastAPI, Python 3.11+
-- **AI/ML:** Hugging Face Transformers, spaCy, Tesseract OCR
-- **Database:** PostgreSQL
-- **Infrastructure:** Docker, Docker Compose
-- **Documentation:** OpenAPI/Swagger
+### Backend Framework
+- **FastAPI**: Modern async web framework
+- **Python 3.11+**: Latest Python features
+
+### Databases & Search
+- **PostgreSQL 15**: Primary database with JSONB support
+- **Elasticsearch 8**: Full-text search with vector embeddings
+- **Redis**: Caching and Celery broker
+
+### AI/ML Components
+- **Hugging Face Transformers**: BERT-based NER, zero-shot classification
+- **spaCy**: Fast NER processing
+- **sentence-transformers**: Semantic embeddings (768-dim vectors)
+- **LangChain + OpenAI**: LLM orchestration for analysis
+
+### Document Processing
+- **Apache Tika**: Primary document extraction
+- **PyPDF2 & pdfplumber**: PDF parsing with fallback
+- **python-docx**: DOCX parsing
+- **Tesseract OCR**: Image text extraction
+
+### Infrastructure
+- **Docker & Docker Compose**: Containerization
+- **Celery**: Async task queue
+- **GitHub Actions**: CI/CD pipeline
+
+### Monitoring
+- **Prometheus**: Metrics collection
+- **Grafana**: Visualization dashboards
+- **ELK Stack**: Centralized logging
+- **Sentry**: Error tracking
 
 ## Quick Start
 
-1. Clone the repository
+### Prerequisites
+- Docker & Docker Compose
+- Python 3.11+
+- Git
+
+### 1. Clone Repository
 ```bash
-git clone https://github.com/yourusername/resume-parser-ai.git
-cd resume-parser-ai
+git clone https://github.com/Jeevanjot19/AI-Resume-Parser.git
+cd AI-Resume-Parser
 ```
 
-2. Run setup script
+### 2. Environment Setup
 ```bash
-./setup.sh
+cp .env.example .env
+# Edit .env with your configuration
 ```
 
-3. Start with Docker Compose
+### 3. Start Services
 ```bash
 docker-compose up -d
 ```
 
-4. Access API documentation at http://localhost:8000/docs
-
-## Architecture
-
-The system uses a microservices-based architecture with the following components:
-
-- API Service: FastAPI-based REST API
-- Parser Service: Resume parsing and data extraction
-- AI Service: ML models for enhanced parsing and matching
-- Database Service: PostgreSQL for data persistence
-- Cache Service: Redis for performance optimization
-
-## Development
-
+### 4. Run Migrations
 ```bash
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate  # Linux/Mac
-.\venv\Scripts\activate   # Windows
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Run development server
-uvicorn app.main:app --reload
+docker-compose exec api alembic upgrade head
 ```
 
-## Testing
+### 5. Access API
+- **API Docs**: http://localhost:8000/api/v1/docs
+- **Health Check**: http://localhost:8000/api/v1/health
+- **Grafana**: http://localhost:3000 (admin/admin)
 
-```bash
-# Run tests
-pytest
+## API Endpoints
 
-# Run with coverage
-pytest --cov=app tests/
+### Resume Operations
+
+#### Upload Resume
+```http
+POST /api/v1/resumes/upload
+Content-Type: multipart/form-data
+
+file: <resume_file>
+```
+
+#### Get Resume
+```http
+GET /api/v1/resumes/{resume_id}
+```
+
+#### Get AI Analysis
+```http
+GET /api/v1/resumes/{resume_id}/analysis
+```
+
+#### Match with Job
+```http
+POST /api/v1/resumes/{resume_id}/match
+```
+
+#### Search Resumes
+```http
+POST /api/v1/resumes/search
+```
+
+### Health Checks
+```http
+GET /api/v1/health
+GET /api/v1/health/ready
+GET /api/v1/health/live
 ```
 
 ## License
 
-MIT
+MIT License
