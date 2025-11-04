@@ -50,6 +50,12 @@ uploads/
 /models/
 *.pth
 
+# Kaggle dataset files (large files, download separately)
+data/kaggle_resume_dataset/Resume.csv
+data/kaggle_resume_dataset/data/
+!data/kaggle_resume_dataset/README.md
+!data/kaggle_resume_dataset/.gitkeep
+
 # System Files
 .DS_Store
 Thumbs.db
