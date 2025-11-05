@@ -200,7 +200,7 @@ class AIEnhancerService:
         text: str,
         structured_data: Dict[str, Any]
     ) -> Dict[str, Any]:
-        """Analyze career path and progression."""
+        """Analyze career path and progression with detailed insights."""
         try:
             career_level = await self.classifier.determine_career_level(
                 text,
@@ -215,24 +215,38 @@ class AIEnhancerService:
             # Define career progression paths
             progression_map = {
                 'entry': ['mid', 'senior'],
+                'junior': ['mid', 'senior'],
                 'mid': ['senior', 'lead'],
-                'senior': ['lead', 'principal'],
-                'lead': ['principal', 'director'],
-                'principal': ['director', 'vp'],
-                'director': ['vp', 'executive'],
-                'vp': ['executive', 'c-level'],
-                'executive': ['board member', 'advisor'],
+                'senior': ['lead', 'principal', 'staff'],
+                'lead': ['principal', 'staff', 'director'],
+                'principal': ['director', 'distinguished'],
+                'staff': ['principal', 'director'],
+                'director': ['senior director', 'vp'],
+                'vp': ['svp', 'executive'],
+                'svp': ['executive', 'c-level'],
+                'executive': ['c-level', 'board member'],
                 'c-level': ['board member', 'advisor']
             }
             
             career_level_lower = career_level.lower()
             next_steps = progression_map.get(career_level_lower, ['senior', 'lead'])
             
+            # Analyze career progression from work experience
+            work_exp = structured_data.get('work_experience', [])
+            progression_analysis = self._analyze_career_progression(work_exp)
+            
+            # Calculate experience level confidence based on years
+            total_years = structured_data.get('total_experience_years', 0)
+            confidence = self._calculate_career_confidence(career_level_lower, total_years)
+            
             return {
                 'current_level': career_level,
-                'confidence': 0.7,  # Default confidence since we don't get it from classifier
+                'confidence': confidence,
                 'next_steps': next_steps,
-                'recommended_timeline': '2-3 years' if career_level_lower in ['entry', 'junior'] else '3-5 years'
+                'recommended_timeline': self._get_progression_timeline(career_level_lower),
+                'progression_trajectory': progression_analysis.get('trajectory', 'steady'),
+                'growth_rate': progression_analysis.get('growth_rate', 'normal'),
+                'leadership_indicators': progression_analysis.get('leadership_indicators', [])
             }
         except Exception as e:
             logger.error(f"Error in _analyze_career_path: {e}")
@@ -240,8 +254,109 @@ class AIEnhancerService:
                 'current_level': 'mid',
                 'confidence': 0.5,
                 'next_steps': ['senior', 'lead'],
-                'recommended_timeline': '3-5 years'
+                'recommended_timeline': '3-5 years',
+                'progression_trajectory': 'steady',
+                'growth_rate': 'normal',
+                'leadership_indicators': []
             }
+    
+    def _analyze_career_progression(self, work_experience: List[Dict]) -> Dict[str, Any]:
+        """Analyze career progression from work history."""
+        if not work_experience or len(work_experience) < 2:
+            return {
+                'trajectory': 'insufficient_data',
+                'growth_rate': 'unknown',
+                'leadership_indicators': []
+            }
+        
+        # Extract seniority levels from job titles
+        seniority_keywords = {
+            'entry': ['intern', 'trainee', 'junior', 'associate'],
+            'mid': ['engineer', 'developer', 'analyst', 'specialist'],
+            'senior': ['senior', 'sr.', 'lead'],
+            'leadership': ['manager', 'director', 'head of', 'vp', 'chief', 'principal', 'staff']
+        }
+        
+        job_levels = []
+        leadership_indicators = []
+        
+        for exp in work_experience:
+            title = exp.get('title', '').lower()
+            
+            # Determine level
+            if any(kw in title for kw in seniority_keywords['leadership']):
+                job_levels.append(3)
+                leadership_indicators.append(f"Leadership role: {exp.get('title')}")
+            elif any(kw in title for kw in seniority_keywords['senior']):
+                job_levels.append(2)
+            elif any(kw in title for kw in seniority_keywords['entry']):
+                job_levels.append(0)
+            else:
+                job_levels.append(1)  # mid-level
+        
+        # Analyze trajectory
+        if len(job_levels) >= 2:
+            if job_levels[-1] > job_levels[0]:
+                trajectory = 'ascending'
+                growth_rate = 'fast' if (job_levels[-1] - job_levels[0]) >= 2 else 'normal'
+            elif job_levels[-1] < job_levels[0]:
+                trajectory = 'descending'
+                growth_rate = 'normal'
+            else:
+                trajectory = 'steady'
+                growth_rate = 'normal'
+        else:
+            trajectory = 'steady'
+            growth_rate = 'normal'
+        
+        return {
+            'trajectory': trajectory,
+            'growth_rate': growth_rate,
+            'leadership_indicators': leadership_indicators
+        }
+    
+    def _calculate_career_confidence(self, career_level: str, total_years: float) -> float:
+        """Calculate confidence in career level determination."""
+        expected_years = {
+            'entry': (0, 2),
+            'junior': (0, 3),
+            'mid': (2, 7),
+            'senior': (5, 12),
+            'lead': (7, 15),
+            'principal': (10, 20),
+            'staff': (10, 20),
+            'director': (12, 25),
+            'vp': (15, 30),
+            'executive': (20, 40)
+        }
+        
+        if career_level not in expected_years:
+            return 0.5
+        
+        min_years, max_years = expected_years[career_level]
+        
+        if min_years <= total_years <= max_years:
+            return 0.9
+        elif total_years < min_years:
+            return 0.6  # Might be high performer
+        else:
+            return 0.7  # Experienced in level
+    
+    def _get_progression_timeline(self, career_level: str) -> str:
+        """Get recommended timeline for next career step."""
+        timelines = {
+            'entry': '1-2 years',
+            'junior': '2-3 years',
+            'mid': '3-5 years',
+            'senior': '4-6 years',
+            'lead': '5-7 years',
+            'principal': '5-10 years',
+            'staff': '5-10 years',
+            'director': '7-10 years',
+            'vp': '10+ years',
+            'executive': '10+ years'
+        }
+        return timelines.get(career_level, '3-5 years')
     
     async def _generate_suggestions(
         self,
@@ -313,25 +428,135 @@ class AIEnhancerService:
         current_skills: List[str],
         target_industry: Optional[str]
     ) -> List[str]:
-        """Identify skill gaps for target industry."""
+        """Identify skill gaps for target industry with priority levels."""
         if not target_industry:
             return []
         
-        # Industry-specific skill requirements
+        # Industry-specific skill requirements with priority levels
         industry_skills = {
-            'Software Engineering': ['Python', 'JavaScript', 'Git', 'Docker', 'Kubernetes', 'AWS', 'CI/CD'],
-            'Data Science': ['Python', 'R', 'SQL', 'Machine Learning', 'Statistics', 'TensorFlow', 'PyTorch'],
-            'Product Management': ['Agile', 'Scrum', 'Product Strategy', 'Analytics', 'User Research'],
-            'Marketing': ['SEO', 'Content Marketing', 'Analytics', 'Social Media', 'Email Marketing'],
-            'Finance': ['Excel', 'Financial Modeling', 'SQL', 'Python', 'Risk Management']
+            'Software Engineering': {
+                'critical': ['Python', 'JavaScript', 'Git', 'SQL'],
+                'important': ['Docker', 'Kubernetes', 'AWS', 'CI/CD', 'React'],
+                'emerging': ['Rust', 'Go', 'WebAssembly', 'Serverless']
+            },
+            'Data Science': {
+                'critical': ['Python', 'SQL', 'Machine Learning', 'Statistics'],
+                'important': ['R', 'TensorFlow', 'PyTorch', 'Pandas', 'Data Visualization'],
+                'emerging': ['MLOps', 'AutoML', 'LLMs', 'Feature Engineering']
+            },
+            'Product Management': {
+                'critical': ['Agile', 'Product Strategy', 'User Research'],
+                'important': ['Scrum', 'Analytics', 'SQL', 'A/B Testing'],
+                'emerging': ['AI Product Management', 'Growth Hacking', 'Product-Led Growth']
+            },
+            'Marketing': {
+                'critical': ['SEO', 'Content Marketing', 'Analytics'],
+                'important': ['Social Media', 'Email Marketing', 'Google Ads', 'Marketing Automation'],
+                'emerging': ['AI Marketing', 'Influencer Marketing', 'Voice Search', 'Video Marketing']
+            },
+            'Finance': {
+                'critical': ['Excel', 'Financial Modeling', 'Risk Management'],
+                'important': ['SQL', 'Python', 'Bloomberg Terminal', 'VBA'],
+                'emerging': ['Blockchain', 'DeFi', 'Algorithmic Trading', 'FinTech']
+            },
+            'Technology': {
+                'critical': ['Programming', 'Software Development', 'APIs'],
+                'important': ['Cloud Computing', 'DevOps', 'Security', 'Testing'],
+                'emerging': ['AI/ML', 'Edge Computing', 'Quantum Computing']
+            }
         }
         
-        required_skills = industry_skills.get(target_industry, [])
-        current_skills_lower = [s.lower() for s in current_skills]
+        skill_requirements = industry_skills.get(target_industry, {
+            'critical': [],
+            'important': [],
+            'emerging': []
+        })
         
-        gaps = [
-            skill for skill in required_skills
-            if skill.lower() not in current_skills_lower
-        ]
+        current_skills_lower = [s.lower() for s in current_skills]
+        gaps = []
+        
+        # Check critical skills first
+        for skill in skill_requirements.get('critical', []):
+            if skill.lower() not in current_skills_lower:
+                gaps.append(f"{skill} [CRITICAL]")
+        
+        # Then important skills
+        for skill in skill_requirements.get('important', [])[:3]:
+            if skill.lower() not in current_skills_lower:
+                gaps.append(f"{skill} [Important]")
+        
+        # Finally emerging skills
+        for skill in skill_requirements.get('emerging', [])[:2]:
+            if skill.lower() not in current_skills_lower:
+                gaps.append(f"{skill} [Emerging Trend]")
         
         return gaps[:5]  # Return top 5 gaps
+    
+    def score_skill_relevance(
+        self,
+        skills: List[str],
+        industry: str,
+        job_level: str
+    ) -> Dict[str, float]:
+        """
+        Score skill relevance for a given industry and job level.
+        
+        Args:
+            skills: List of candidate skills
+            industry: Target industry
+            job_level: Career level (entry, mid, senior, etc.)
+        
+        Returns:
+            Dictionary mapping skills to relevance scores (0.0 to 1.0)
+        """
+        skill_scores = {}
+        
+        # Industry relevance weights
+        industry_weights = {
+            'Software Engineering': {
+                'Python': 0.95, 'JavaScript': 0.95, 'Git': 0.90, 'Docker': 0.85,
+                'React': 0.85, 'SQL': 0.85, 'AWS': 0.90, 'Kubernetes': 0.80
+            },
+            'Data Science': {
+                'Python': 0.98, 'Machine Learning': 0.95, 'SQL': 0.90, 'Statistics': 0.95,
+                'TensorFlow': 0.85, 'PyTorch': 0.85, 'Pandas': 0.90, 'R': 0.80
+            },
+            'Finance': {
+                'Excel': 0.95, 'Financial Modeling': 0.90, 'SQL': 0.80, 'Python': 0.75,
+                'Risk Management': 0.85, 'VBA': 0.70
+            },
+            'Marketing': {
+                'SEO': 0.90, 'Content Marketing': 0.85, 'Analytics': 0.85,
+                'Social Media': 0.80, 'Email Marketing': 0.75
+            },
+            'Technology': {
+                'Programming': 0.90, 'Cloud': 0.85, 'DevOps': 0.80, 'APIs': 0.85
+            }
+        }
+        
+        # Level-based multipliers (senior roles value breadth, entry values fundamentals)
+        level_multipliers = {
+            'entry': 0.7,
+            'junior': 0.75,
+            'mid': 0.85,
+            'senior': 0.95,
+            'lead': 1.0,
+            'principal': 1.0,
+            'staff': 1.0,
+            'director': 0.9,  # Directors focus more on strategy
+            'vp': 0.85,
+            'executive': 0.80
+        }
+        
+        industry_skill_weights = industry_weights.get(industry, {})
+        level_mult = level_multipliers.get(job_level.lower(), 0.85)
+        
+        for skill in skills:
+            # Get base relevance score for this skill in the industry
+            base_score = industry_skill_weights.get(skill, 0.5)  # Default 0.5 for unknown
+            
+            # Apply level multiplier
+            final_score = min(1.0, base_score * level_mult)
+            skill_scores[skill] = round(final_score, 2)
+        
+        return skill_scores

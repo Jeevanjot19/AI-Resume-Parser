@@ -1,0 +1,112 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual Environment
+venv/
+env/
+ENV/
+.venv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.hypothesis/
+
+# Documentation
+docs/_build/
+*.md
+!README.md
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Docker
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Logs
+*.log
+logs/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+data/
+
+# Models (download at runtime or mount as volume)
+models/huggingface/
+models/spacy/
+
+# Uploads
+uploads/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary
+tmp/
+temp/
+*.tmp
+
+# Build logs
+docker_build_log*.txt
+
+# Status reports (development files)
+*_REPORT.md
+*_STATUS.md
+*_GUIDE.md
+*_CHECKLIST.md
+ENHANCEMENTS.md
+IMPLEMENTATION_COMPLETE.md
+QUICKSTART.md
+SUBMISSION.md
+NEXT_STEPS.md
+SETUP_COMPLETE.md
+EXACT_API_IMPLEMENTATION.md
+LOCAL_SETUP_PROGRESS.md
+CORE_FEATURES_STATUS.md
+FINAL_STATUS_REPORT.md
+
+# Test files
+test_*.py
+*_test.py
+
+# Airflow (if using external orchestration)
+airflow/
+
+# Monitoring (if using external monitoring)
+monitoring/
+
+# Alembic (migrations handled separately)
+alembic/
+alembic.ini
+
+# Scripts (development only)
+scripts/

@@ -1,0 +1,52 @@
+{
+  "jobDescription": {
+    "title": "Senior Python Developer",
+    "company": "Tech Innovations Inc",
+    "location": "San Francisco, CA",
+    "type": "Full-time",
+    "experience": {
+      "minimum": 3,
+      "preferred": 5,
+      "level": "Senior"
+    },
+    "description": "We are seeking an experienced Python developer to join our AI team",
+    "requirements": {
+      "required": [
+        "Bachelor's degree in Computer Science",
+        "5+ years Python experience"
+      ],
+      "preferred": [
+        "Master's degree",
+        "Machine Learning experience"
+      ]
+    },
+    "skills": {
+      "required": [
+        "Python",
+        "SQL",
+        "REST APIs"
+      ],
+      "preferred": [
+        "FastAPI",
+        "Docker",
+        "AWS"
+      ]
+    },
+    "salary": {
+      "min": 120000,
+      "max": 180000,
+      "currency": "USD"
+    },
+    "benefits": [
+      "Health Insurance",
+      "401k",
+      "Remote Work"
+    ],
+    "industry": "Technology"
+  },
+  "options": {
+    "includeExplanation": true,
+    "detailedBreakdown": true,
+    "suggestImprovements": true
+  }
+}

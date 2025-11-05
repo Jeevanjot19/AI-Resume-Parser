@@ -143,29 +143,109 @@ class NERExtractor:
     
     @staticmethod
     def _extract_emails(text: str) -> List[str]:
-        """Extract email addresses."""
-        email_pattern = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
-        return re.findall(email_pattern, text)
+        """Extract email addresses with improved patterns."""
+        # Multiple patterns for robustness
+        patterns = [
+            r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b',  # Standard email
+            r'[Ee]mail\s*[:=]\s*([A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,})',  # Email: label
+            r'[Ee]-?mail\s*[:=]\s*([A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,})',  # E-mail: label
+        ]
+        
+        emails = []
+        for pattern in patterns:
+            matches = re.findall(pattern, text, re.IGNORECASE)
+            if isinstance(matches[0] if matches else None, tuple):
+                emails.extend([m for m in matches if m])
+            else:
+                emails.extend(matches)
+        
+        # Clean and deduplicate
+        cleaned = []
+        for email in emails:
+            email = email.strip().lower()
+            # Filter out common false positives
+            if email and '@' in email and '.' in email.split('@')[-1]:
+                if not any(skip in email for skip in ['example.com', 'test.com', 'email.com']):
+                    cleaned.append(email)
+        
+        return list(set(cleaned))
     
     @staticmethod
     def _extract_phones(text: str) -> List[str]:
-        """Extract phone numbers."""
+        """Extract phone numbers with comprehensive international patterns."""
         phone_patterns = [
-            r'\+?\d{1,3}[-.\s]?\(?\d{1,4}\)?[-.\s]?\d{1,4}[-.\s]?\d{1,9}',
-            r'\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}',
+            # International formats
+            r'\+\d{1,3}[-.\s]?\(?\d{1,4}\)?[-.\s]?\d{1,4}[-.\s]?\d{1,9}',  # +1-234-567-8900
+            # US/Canada formats
+            r'\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}',  # (123) 456-7890 or 123-456-7890
+            r'\d{3}[-.\s]?\d{3}[-.\s]?\d{4}',  # 123-456-7890
+            # India formats
+            r'\+?91[-.\s]?\d{10}',  # +91-9876543210
+            r'\d{5}[-.\s]?\d{5}',  # 98765-43210
+            # UK formats
+            r'\+?44[-.\s]?\d{10}',  # +44-1234567890
+            # Generic 10-digit
+            r'\b\d{10}\b',  # 1234567890
+            # With labels
+            r'[Pp]hone\s*[:=]\s*([\d\s\-\+\(\)]+)',
+            r'[Mm]obile\s*[:=]\s*([\d\s\-\+\(\)]+)',
+            r'[Cc]ell\s*[:=]\s*([\d\s\-\+\(\)]+)',
+            r'[Tt]el\s*[:=]\s*([\d\s\-\+\(\)]+)',
         ]
         
         phones = []
         for pattern in phone_patterns:
-            phones.extend(re.findall(pattern, text))
+            matches = re.findall(pattern, text)
+            phones.extend(matches)
         
-        return phones
+        # Clean and validate phone numbers
+        cleaned = []
+        for phone in phones:
+            # Remove whitespace and special chars for validation
+            digits_only = re.sub(r'[^\d]', '', phone)
+            # Valid phone numbers have 7-15 digits
+            if 7 <= len(digits_only) <= 15:
+                # Keep original formatting
+                cleaned.append(phone.strip())
+        
+        return list(set(cleaned))
     
     @staticmethod
     def _extract_urls(text: str) -> List[str]:
-        """Extract URLs."""
-        url_pattern = r'https?://(?:www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_\+.~#?&/=]*)'
-        return re.findall(url_pattern, text)
+        """Extract URLs including social profiles."""
+        patterns = [
+            # Full HTTP/HTTPS URLs
+            r'https?://(?:www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_\+.~#?&/=]*)',
+            # LinkedIn profiles (with and without http)
+            r'(?:https?://)?(?:www\.)?linkedin\.com/in/[\w\-]+/?',
+            # GitHub profiles
+            r'(?:https?://)?(?:www\.)?github\.com/[\w\-]+/?',
+            # Twitter
+            r'(?:https?://)?(?:www\.)?twitter\.com/[\w\-]+/?',
+            # Portfolio sites (www.domain.com)
+            r'www\.[\w\-]+\.[a-z]{2,}(?:/[\w\-]*)*',
+        ]
+        
+        urls = []
+        for pattern in patterns:
+            matches = re.findall(pattern, text, re.IGNORECASE)
+            urls.extend(matches)
+        
+        # Clean and deduplicate
+        cleaned = []
+        for url in urls:
+            url = url.strip().rstrip('/')
+            # Ensure LinkedIn and GitHub URLs have https://
+            if 'linkedin.com' in url and not url.startswith('http'):
+                url = 'https://' + url
+            elif 'github.com' in url and not url.startswith('http'):
+                url = 'https://' + url
+            elif 'twitter.com' in url and not url.startswith('http'):
+                url = 'https://' + url
+            
+            cleaned.append(url)
+        
+        return list(set(cleaned))
     
     async def extract_skills(self, text: str) -> List[str]:
         """Extract skills from text with comprehensive keyword list."""

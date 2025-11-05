@@ -1,0 +1,778 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "AI-Powered Resume Parser & Job Matcher API",
+    "description": "Intelligent resume parsing, semantic search, and AI-driven job matching with 5-category scoring algorithm. Process resumes from multiple formats (PDF, DOCX, TXT, images) and match candidates with jobs using advanced ML models.",
+    "version": "1.0.0",
+    "contact": {
+      "name": "API Support",
+      "url": "https://github.com/yourusername/resume-parser-ai"
+    },
+    "license": {
+      "name": "MIT",
+      "url": "https://opensource.org/licenses/MIT"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8000/api/v1",
+      "description": "Development server"
+    },
+    {
+      "url": "https://api.resumeparser.com/api/v1",
+      "description": "Production server"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Resumes",
+      "description": "Resume upload, parsing, and retrieval operations"
+    },
+    {
+      "name": "Search",
+      "description": "Semantic and keyword-based resume search"
+    },
+    {
+      "name": "Matching",
+      "description": "Job-resume matching with 5-category scoring"
+    },
+    {
+      "name": "Analysis",
+      "description": "AI-powered resume analysis and insights"
+    },
+    {
+      "name": "Jobs",
+      "description": "Job description parsing and processing"
+    },
+    {
+      "name": "Health",
+      "description": "System health and monitoring"
+    }
+  ],
+  "paths": {
+    "/resumes/upload": {
+      "post": {
+        "tags": ["Resumes"],
+        "summary": "Upload and parse resume",
+        "description": "Upload a resume file (PDF, DOCX, TXT, or image) for parsing and AI enhancement. The system extracts personal information, skills, experience, education, certifications, and more.",
+        "operationId": "uploadResume",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "Resume file (PDF, DOCX, TXT, JPG, PNG)"
+                  }
+                },
+                "required": ["file"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Resume uploaded and parsed successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResumeResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid file format or corrupted file"
+          },
+          "500": {
+            "description": "Internal server error during processing"
+          }
+        }
+      }
+    },
+    "/resumes/{resume_id}": {
+      "get": {
+        "tags": ["Resumes"],
+        "summary": "Get resume by ID",
+        "description": "Retrieve a parsed resume with all extracted information including personal details, skills, experience, education, and AI enhancements.",
+        "operationId": "getResume",
+        "parameters": [
+          {
+            "name": "resume_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Unique resume identifier"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Resume retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResumeResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resume not found"
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Resumes"],
+        "summary": "Delete resume",
+        "description": "Permanently delete a resume and all associated data from the system.",
+        "operationId": "deleteResume",
+        "parameters": [
+          {
+            "name": "resume_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Unique resume identifier"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Resume deleted successfully"
+          },
+          "404": {
+            "description": "Resume not found"
+          }
+        }
+      }
+    },
+    "/resumes/{resume_id}/analysis": {
+      "get": {
+        "tags": ["Analysis"],
+        "summary": "Get AI-powered resume analysis",
+        "description": "Get comprehensive AI analysis including quality scoring (0-100), career insights, industry classification, skill gap analysis, and improvement recommendations.",
+        "operationId": "analyzeResume",
+        "parameters": [
+          {
+            "name": "resume_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Unique resume identifier"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Analysis completed successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnalysisResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resume not found"
+          }
+        }
+      }
+    },
+    "/resumes/{resume_id}/match": {
+      "post": {
+        "tags": ["Matching"],
+        "summary": "Match resume with job description",
+        "description": "Match a resume with a job description using our proprietary 5-category scoring algorithm: Skills (35%), Experience (25%), Education (15%), Certifications (15%), and Culture Fit (10%). Returns detailed compatibility scores and recommendations.",
+        "operationId": "matchResumeWithJob",
+        "parameters": [
+          {
+            "name": "resume_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Unique resume identifier"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JobMatchRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Matching completed successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MatchResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resume not found"
+          }
+        }
+      }
+    },
+    "/resumes/{resume_id}/status": {
+      "get": {
+        "tags": ["Resumes"],
+        "summary": "Get resume processing status",
+        "description": "Check the processing status of an uploaded resume including progress percentage and any errors encountered.",
+        "operationId": "getResumeStatus",
+        "parameters": [
+          {
+            "name": "resume_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Unique resume identifier"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Status retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatusResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resume not found"
+          }
+        }
+      }
+    },
+    "/resumes/search": {
+      "get": {
+        "tags": ["Search"],
+        "summary": "Search resumes",
+        "description": "Search resumes using keyword or semantic search. Supports searching across skills, experience, education, certifications, and more with weighted scoring.",
+        "operationId": "searchResumes",
+        "parameters": [
+          {
+            "name": "query",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Search query (keywords or semantic phrases)"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 10,
+              "minimum": 1,
+              "maximum": 100
+            },
+            "description": "Maximum number of results to return"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Search completed successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ResumeResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/jobs/parse": {
+      "post": {
+        "tags": ["Jobs"],
+        "summary": "Parse job description",
+        "description": "Parse and extract structured information from a job description including required skills, experience level, education requirements, and more.",
+        "operationId": "parseJobDescription",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JobParseRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Job description parsed successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobParseResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "tags": ["Health"],
+        "summary": "Health check",
+        "description": "Check API health status and system availability.",
+        "operationId": "healthCheck",
+        "responses": {
+          "200": {
+            "description": "System is healthy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "healthy"
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ResumeResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Unique resume identifier"
+          },
+          "personal_info": {
+            "$ref": "#/components/schemas/PersonalInfo"
+          },
+          "skills": {
+            "$ref": "#/components/schemas/Skills"
+          },
+          "experience": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WorkExperience"
+            }
+          },
+          "education": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Education"
+            }
+          },
+          "certifications": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Certification"
+            }
+          },
+          "processing_status": {
+            "type": "string",
+            "enum": ["PENDING", "PROCESSING", "COMPLETED", "FAILED"]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "PersonalInfo": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "location": {
+            "type": "string"
+          },
+          "linkedin": {
+            "type": "string",
+            "format": "uri"
+          },
+          "github": {
+            "type": "string",
+            "format": "uri"
+          },
+          "website": {
+            "type": "string",
+            "format": "uri"
+          }
+        }
+      },
+      "Skills": {
+        "type": "object",
+        "properties": {
+          "technical": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "category": {
+                  "type": "string"
+                },
+                "skills": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          },
+          "soft_skills": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "languages": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "language": {
+                  "type": "string"
+                },
+                "proficiency": {
+                  "type": "string",
+                  "enum": ["Basic", "Intermediate", "Advanced", "Native"]
+                }
+              }
+            }
+          }
+        }
+      },
+      "WorkExperience": {
+        "type": "object",
+        "properties": {
+          "company": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "location": {
+            "type": "string"
+          },
+          "start_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "end_date": {
+            "type": "string",
+            "format": "date",
+            "nullable": true
+          },
+          "current": {
+            "type": "boolean"
+          },
+          "description": {
+            "type": "string"
+          },
+          "achievements": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "Education": {
+        "type": "object",
+        "properties": {
+          "degree": {
+            "type": "string"
+          },
+          "field": {
+            "type": "string"
+          },
+          "institution": {
+            "type": "string"
+          },
+          "location": {
+            "type": "string"
+          },
+          "graduation_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "gpa": {
+            "type": "number",
+            "nullable": true
+          },
+          "honors": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "Certification": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "issuer": {
+            "type": "string"
+          },
+          "date": {
+            "type": "string",
+            "format": "date"
+          },
+          "expiry_date": {
+            "type": "string",
+            "format": "date",
+            "nullable": true
+          },
+          "credential_id": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "AnalysisResponse": {
+        "type": "object",
+        "properties": {
+          "quality_score": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100,
+            "description": "Overall resume quality score"
+          },
+          "career_level": {
+            "type": "string",
+            "enum": ["Entry", "Mid", "Senior", "Executive"]
+          },
+          "industry": {
+            "type": "string",
+            "description": "Detected industry category"
+          },
+          "strengths": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "improvements": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "skill_gaps": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "JobMatchRequest": {
+        "type": "object",
+        "required": ["title", "description"],
+        "properties": {
+          "title": {
+            "type": "string",
+            "description": "Job title"
+          },
+          "description": {
+            "type": "string",
+            "description": "Full job description"
+          },
+          "required_skills": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "List of required skills"
+          },
+          "experience_years": {
+            "type": "integer",
+            "description": "Required years of experience"
+          },
+          "education_level": {
+            "type": "string",
+            "description": "Required education level"
+          }
+        }
+      },
+      "MatchResponse": {
+        "type": "object",
+        "properties": {
+          "overall_score": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100,
+            "description": "Overall match score"
+          },
+          "match_details": {
+            "type": "object",
+            "properties": {
+              "skills_match": {
+                "$ref": "#/components/schemas/CategoryMatch"
+              },
+              "experience_match": {
+                "$ref": "#/components/schemas/CategoryMatch"
+              },
+              "education_match": {
+                "$ref": "#/components/schemas/CategoryMatch"
+              },
+              "certification_match": {
+                "$ref": "#/components/schemas/CategoryMatch"
+              },
+              "culture_fit": {
+                "$ref": "#/components/schemas/CategoryMatch"
+              }
+            }
+          },
+          "recommendations": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Actionable recommendations"
+          }
+        }
+      },
+      "CategoryMatch": {
+        "type": "object",
+        "properties": {
+          "score": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "details": {
+            "type": "object",
+            "description": "Category-specific match details"
+          }
+        }
+      },
+      "StatusResponse": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": ["PENDING", "PROCESSING", "COMPLETED", "FAILED"]
+          },
+          "progress": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100,
+            "description": "Processing progress percentage"
+          },
+          "message": {
+            "type": "string",
+            "description": "Status message"
+          }
+        }
+      },
+      "JobParseRequest": {
+        "type": "object",
+        "required": ["description"],
+        "properties": {
+          "description": {
+            "type": "string",
+            "description": "Job description text to parse"
+          }
+        }
+      },
+      "JobParseResponse": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "required_skills": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "experience_years": {
+            "type": "integer"
+          },
+          "education_level": {
+            "type": "string"
+          },
+          "location": {
+            "type": "string"
+          },
+          "salary_range": {
+            "type": "object",
+            "properties": {
+              "min": {
+                "type": "number"
+              },
+              "max": {
+                "type": "number"
+              },
+              "currency": {
+                "type": "string",
+                "default": "USD"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

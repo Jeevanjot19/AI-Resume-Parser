@@ -314,8 +314,8 @@ class ResumeParserService:
         # Extract job titles
         job_titles = self._extract_job_titles(exp_section)
         
-        # Extract achievements with metrics
-        achievements_pattern = r'(increased|reduced|improved|managed|led|developed|built|created|designed|implemented|launched|delivered|achieved|grew|saved|optimized|streamlined)[^.!?\n]*((?:\d+%|\$\d+[KMB]?|\d+\s*(?:people|users|clients|projects|systems|applications|million|thousand)))'
+        # Extract achievements with metrics (ENHANCED)
+        achievements_pattern = r'(increased|reduced|improved|managed|led|developed|built|created|designed|implemented|launched|delivered|achieved|grew|saved|optimized|streamlined|boosted|enhanced|accelerated|decreased|expanded|generated|drove|spearheaded)[^.!?\n]{0,100}?((?:\d+(?:\.\d+)?%|\$\d+(?:\.\d+)?[KMB]?|\d+\+?\s*(?:people|users|clients|customers|projects|systems|applications|products|features|million|thousand|billion|team members?|developers?|engineers?)|(?:\d+x|x\d+)|(?:\d+:\d+)|(?:\d+\/\d+)))'
         achievements = re.findall(achievements_pattern, exp_section, re.IGNORECASE)
         
         # Extract technologies per experience
@@ -444,7 +444,7 @@ class ResumeParserService:
         text: str,
         skills: List[str]
     ) -> Dict[str, List[str]]:
-        """Categorize and standardize skills."""
+        """Categorize and standardize skills with technology stack detection."""
         # Standardize skills
         standardized = []
         for skill in skills:
@@ -465,10 +465,10 @@ class ResumeParserService:
         # Categorize
         technical_keywords = {
             'programming': ['Python', 'Java', 'JavaScript', 'C++', 'C#', 'Ruby', 'PHP', 'Swift', 'Kotlin', 'Go', 'Rust', 'TypeScript'],
-            'frameworks': ['Django', 'Flask', 'FastAPI', 'React', 'Angular', 'Vue', 'Spring', 'Express', 'Next.js'],
-            'databases': ['PostgreSQL', 'MySQL', 'MongoDB', 'Redis', 'Elasticsearch', 'Oracle', 'SQL Server'],
+            'frameworks': ['Django', 'Flask', 'FastAPI', 'React', 'Angular', 'Vue', 'Spring', 'Express', 'Next.js', 'Node.js'],
+            'databases': ['PostgreSQL', 'MySQL', 'MongoDB', 'Redis', 'Elasticsearch', 'Oracle', 'SQL Server', 'SQLite'],
             'cloud': ['AWS', 'Amazon Web Services', 'Azure', 'Microsoft Azure', 'Google Cloud', 'GCP', 'Docker', 'Kubernetes'],
-            'tools': ['Git', 'Jenkins', 'CI/CD', 'Terraform', 'Ansible', 'Linux', 'Agile', 'Scrum']
+            'tools': ['Git', 'Jenkins', 'CI/CD', 'Terraform', 'Ansible', 'Linux', 'Agile', 'Scrum', 'Jira']
         }
         
         categorized = {
@@ -478,7 +478,8 @@ class ResumeParserService:
             'frameworks': [],
             'databases': [],
             'cloud': [],
-            'tools': []
+            'tools': [],
+            'tech_stacks': []  # NEW: Detected technology stacks
         }
         
         # Sub-categorize technical skills
@@ -487,7 +488,39 @@ class ResumeParserService:
                 if skill in keywords or any(keyword.lower() in skill.lower() for keyword in keywords):
                     categorized[category].append(skill)
         
+        # Detect common technology stacks
+        categorized['tech_stacks'] = self._detect_tech_stacks(standardized, text_lower)
+        
         return categorized
+    
+    def _detect_tech_stacks(self, skills: List[str], text_lower: str) -> List[str]:
+        """Detect common technology stacks from skills."""
+        stacks = []
+        skills_lower = [s.lower() for s in skills]
+        
+        # MERN Stack
+        if all(tech in text_lower for tech in ['mongodb', 'express', 'react', 'node']):
+            stacks.append('MERN Stack (MongoDB, Express, React, Node.js)')
+        # MEAN Stack
+        elif all(tech in text_lower for tech in ['mongodb', 'express', 'angular', 'node']):
+            stacks.append('MEAN Stack (MongoDB, Express, Angular, Node.js)')
+        # LAMP Stack
+        elif all(tech in text_lower for tech in ['linux', 'apache', 'mysql', 'php']):
+            stacks.append('LAMP Stack (Linux, Apache, MySQL, PHP)')
+        # Django Stack
+        elif 'django' in skills_lower and 'python' in skills_lower:
+            stacks.append('Django Full Stack (Python, Django, PostgreSQL)')
+        # .NET Stack
+        elif any(tech in text_lower for tech in ['c#', '.net', 'asp.net']):
+            stacks.append('.NET Stack (C#, ASP.NET, SQL Server)')
+        # JAMstack
+        elif all(tech in text_lower for tech in ['javascript', 'api']) and any(tech in text_lower for tech in ['gatsby', 'next', 'netlify']):
+            stacks.append('JAMstack (JavaScript, APIs, Markup)')
+        # Full Stack JavaScript
+        elif 'javascript' in skills_lower and 'node' in text_lower:
+            stacks.append('Full Stack JavaScript')
+        
+        return stacks
     
     def _calculate_total_experience(self, work_experience: List[Dict]) -> float:
         """Calculate total years of experience from work history."""
