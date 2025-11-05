@@ -25,16 +25,18 @@ setup_logging()
 async def lifespan(app: FastAPI):
     """Application lifespan manager."""
     # Startup
-    logger.info(f"Starting {settings.PROJECT_NAME} v1.0.0")
-    logger.info(f"Environment: {settings.ENVIRONMENT}")
-    logger.info(f"Database: {settings.DATABASE_URL.split('@')[-1] if settings.DATABASE_URL else 'Not configured'}")
+    logger.info(f"Starting {settings.PROJECT_NAME} v{settings.VERSION}")
+    logger.info(f"Environment: {'development' if settings.DEBUG else 'production'}")
+    logger.info(f"Database: {settings.sync_database_url}")
     
     # Log configuration
     logger.info(f"API URL: {settings.API_V1_STR}")
     logger.info(f"Upload directory: {settings.UPLOAD_DIR}")
-    logger.info(f"Tika server: {settings.TIKA_SERVER_URL}")
-    logger.info(f"Elasticsearch: {settings.ELASTICSEARCH_URL}")
-    logger.info(f"Redis: redis://{settings.REDIS_HOST}:{settings.REDIS_PORT}")
+    logger.info(f"Tika server JAR: {settings.TIKA_SERVER_JAR}")
+    if hasattr(settings, 'ELASTICSEARCH_URL') and settings.ELASTICSEARCH_ENABLED:
+        logger.info(f"Elasticsearch: {settings.ELASTICSEARCH_URL or 'Not configured'}")
+    if hasattr(settings, 'REDIS_HOST') and settings.REDIS_ENABLED:
+        logger.info(f"Redis: redis://{settings.REDIS_HOST}:{settings.REDIS_PORT}")
     
     yield
     

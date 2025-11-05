@@ -5,8 +5,8 @@ AI Analysis model for storing AI-generated insights.
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, CheckConstraint
-from sqlalchemy.dialects.postgresql import UUID, JSONB, ARRAY
+from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, CheckConstraint, JSON
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
 from app.db.base_class import Base
@@ -39,13 +39,13 @@ class AIAnalysis(Base):
     )
     
     # Classifications
-    industry_classifications = Column(JSONB, nullable=True)  # {"tech": 0.95, "finance": 0.45}
+    industry_classifications = Column(JSON, nullable=True)  # {"tech": 0.95, "finance": 0.45}
     career_level = Column(String(50), nullable=True)  # entry, mid, senior, executive
     
     # Insights
-    salary_estimate = Column(JSONB, nullable=True)  # {"min": 80000, "max": 120000, "currency": "USD"}
-    suggestions = Column(ARRAY(String), nullable=True)  # Improvement suggestions
-    confidence_scores = Column(JSONB, nullable=True)  # Various confidence metrics
+    salary_estimate = Column(JSON, nullable=True)  # {"min": 80000, "max": 120000, "currency": "USD"}
+    suggestions = Column(JSON, nullable=True)  # Improvement suggestions
+    confidence_scores = Column(JSON, nullable=True)  # Various confidence metrics
     
     # Additional metadata
     analysis_version = Column(String(50), default="1.0.0")
@@ -59,3 +59,4 @@ class AIAnalysis(Base):
     
     def __repr__(self):
         return f"<AIAnalysis(id={self.id}, quality={self.quality_score}, career_level={self.career_level})>"
+

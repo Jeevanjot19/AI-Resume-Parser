@@ -68,10 +68,32 @@ class AIEnhancerService:
                 self._generate_suggestions(resume_text, structured_data)
             )
             
+            # Validate that all required data is in correct format
+            if not isinstance(quality_analysis, dict):
+                logger.error(f"quality_analysis is not a dict: {type(quality_analysis)}")
+                quality_analysis = {'overall_score': 0, 'strengths': [], 'weaknesses': []}
+            
+            if not isinstance(industry_fit, dict):
+                logger.error(f"industry_fit is not a dict: {type(industry_fit)}")
+                industry_fit = {'top_industry': 'Unknown', 'confidence': 0.0, 'all_industries': []}
+            
+            if not isinstance(career_analysis, dict):
+                logger.error(f"career_analysis is not a dict: {type(career_analysis)}")
+                career_analysis = {}
+            
+            if not isinstance(suggestions, list):
+                logger.error(f"suggestions is not a list: {type(suggestions)}")
+                suggestions = []
+            
             # Calculate completeness score
             completeness = self._calculate_completeness_score(structured_data)
             
             # Prepare enhancements
+            skill_gaps = await self._identify_skill_gaps(
+                structured_data.get('skills', []),
+                industry_fit.get('top_industry')
+            )
+            
             enhancements = {
                 'quality_score': quality_analysis.get('overall_score', 0),
                 'completeness_score': completeness,
@@ -80,31 +102,35 @@ class AIEnhancerService:
                 'suggestions': suggestions,
                 'strengths': quality_analysis.get('strengths', []),
                 'weaknesses': quality_analysis.get('weaknesses', []),
-                'skill_gaps': await self._identify_skill_gaps(
-                    structured_data.get('skills', []),
-                    industry_fit.get('top_industry')
-                )
+                'skill_gaps': skill_gaps
             }
             
-            # Save to database
+            # Prepare confidence scores
+            confidence_scores = {
+                'quality': quality_analysis.get('overall_score', 0) / 100.0,
+                'industry_fit': industry_fit.get('confidence', 0.0),
+                'career_level': career_analysis.get('confidence', 0.0)
+            }
+            
+            # Save to database with correct field names
             ai_analysis = AIAnalysis(
                 resume_id=resume_id,
                 quality_score=enhancements['quality_score'],
                 completeness_score=completeness,
-                industry_matches=industry_fit,
-                skill_gaps=enhancements['skill_gaps'],
-                improvement_suggestions=suggestions,
-                career_path_analysis=career_analysis,
-                ai_enhancements=enhancements
+                industry_classifications=industry_fit,  # Changed from industry_matches
+                career_level=career_analysis.get('current_level', 'mid'),  # Changed from career_path_analysis
+                suggestions=suggestions,  # Changed from improvement_suggestions
+                confidence_scores=confidence_scores  # Added confidence scores
             )
             db.add(ai_analysis)
             await db.commit()
             
             logger.info(f"Resume enhancement completed: {resume_id}")
             return enhancements
+            return enhancements
             
         except Exception as e:
-            logger.error(f"Error enhancing resume: {e}")
+            logger.error(f"Error enhancing resume: {e}", exc_info=True)
             raise
     
     async def get_resume_analysis(
@@ -134,24 +160,40 @@ class AIEnhancerService:
     
     async def _analyze_industry_fit(self, text: str) -> Dict[str, Any]:
         """Analyze industry fit with confidence scores."""
-        # Get top industries with scores
-        industry_result = await self.classifier.classify_industry(text)
-        
-        # Get all industries sorted by score
-        industries_sorted = sorted(
-            industry_result['scores'].items(),
-            key=lambda x: x[1],
-            reverse=True
-        )
-        
-        return {
-            'top_industry': industry_result['label'],
-            'confidence': industry_result['confidence'],
-            'all_industries': [
-                {'industry': ind, 'score': score}
-                for ind, score in industries_sorted[:5]
-            ]
-        }
+        try:
+            # Get top industries with scores
+            industry_scores = await self.classifier.classify_industry(text)
+            
+            # Handle case where classify_industry returns unexpected type
+            if not isinstance(industry_scores, dict):
+                logger.warning(f"classify_industry returned unexpected type: {type(industry_scores)}")
+                industry_scores = {"Unknown": 0.5}
+            
+            # Get all industries sorted by score
+            industries_sorted = sorted(
+                industry_scores.items(),
+                key=lambda x: x[1],
+                reverse=True
+            )
+            
+            # Get top industry
+            top_industry, top_score = industries_sorted[0] if industries_sorted else ("Unknown", 0.0)
+            
+            return {
+                'top_industry': top_industry,
+                'confidence': float(top_score),
+                'all_industries': [
+                    {'industry': ind, 'score': float(score)}
+                    for ind, score in industries_sorted[:5]
+                ]
+            }
+        except Exception as e:
+            logger.error(f"Error in _analyze_industry_fit: {e}")
+            return {
+                'top_industry': 'Unknown',
+                'confidence': 0.0,
+                'all_industries': []
+            }
     
     async def _analyze_career_path(
         self,
@@ -159,33 +201,47 @@ class AIEnhancerService:
         structured_data: Dict[str, Any]
     ) -> Dict[str, Any]:
         """Analyze career path and progression."""
-        career_level = await self.classifier.determine_career_level(
-            text,
-            structured_data.get('total_experience_years')
-        )
-        
-        # Define career progression paths
-        progression_map = {
-            'Entry Level': ['Junior', 'Mid-level'],
-            'Junior': ['Mid-level', 'Senior'],
-            'Mid-level': ['Senior', 'Lead'],
-            'Senior': ['Lead', 'Principal'],
-            'Lead': ['Principal', 'Director'],
-            'Principal': ['Director', 'VP'],
-            'Director': ['VP', 'C-Level'],
-            'VP': ['C-Level', 'Executive'],
-            'C-Level': ['Board Member', 'Advisor'],
-            'Executive': ['Board Member', 'Advisor']
-        }
-        
-        next_steps = progression_map.get(career_level['label'], [])
-        
-        return {
-            'current_level': career_level['label'],
-            'confidence': career_level['confidence'],
-            'next_steps': next_steps,
-            'recommended_timeline': '2-3 years' if career_level['label'] in ['Entry Level', 'Junior'] else '3-5 years'
-        }
+        try:
+            career_level = await self.classifier.determine_career_level(
+                text,
+                structured_data.get('total_experience_years')
+            )
+            
+            # career_level is a string, not a dict
+            if not isinstance(career_level, str):
+                logger.warning(f"career_level is not a string: {type(career_level)}")
+                career_level = "mid"
+            
+            # Define career progression paths
+            progression_map = {
+                'entry': ['mid', 'senior'],
+                'mid': ['senior', 'lead'],
+                'senior': ['lead', 'principal'],
+                'lead': ['principal', 'director'],
+                'principal': ['director', 'vp'],
+                'director': ['vp', 'executive'],
+                'vp': ['executive', 'c-level'],
+                'executive': ['board member', 'advisor'],
+                'c-level': ['board member', 'advisor']
+            }
+            
+            career_level_lower = career_level.lower()
+            next_steps = progression_map.get(career_level_lower, ['senior', 'lead'])
+            
+            return {
+                'current_level': career_level,
+                'confidence': 0.7,  # Default confidence since we don't get it from classifier
+                'next_steps': next_steps,
+                'recommended_timeline': '2-3 years' if career_level_lower in ['entry', 'junior'] else '3-5 years'
+            }
+        except Exception as e:
+            logger.error(f"Error in _analyze_career_path: {e}")
+            return {
+                'current_level': 'mid',
+                'confidence': 0.5,
+                'next_steps': ['senior', 'lead'],
+                'recommended_timeline': '3-5 years'
+            }
     
     async def _generate_suggestions(
         self,

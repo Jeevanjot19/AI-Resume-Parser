@@ -26,22 +26,17 @@ class TextClassifier:
         try:
             logger.info("Loading text classification models...")
             
-            # Use zero-shot classification for flexibility
-            self.industry_classifier = pipeline(
-                "zero-shot-classification",
-                model="facebook/bart-large-mnli"
-            )
-            
-            self.job_role_classifier = pipeline(
-                "zero-shot-classification",
-                model="facebook/bart-large-mnli"
-            )
+            # Skip heavy models due to memory constraints - use fallback mode
+            logger.warning("Text classifiers running in fallback mode (keyword-based classification)")
+            self.industry_classifier = None
+            self.job_role_classifier = None
             
             self._initialized = True
             logger.info("Text classifiers initialized successfully")
         except Exception as e:
             logger.error(f"Error initializing classifiers: {e}")
-            raise
+            # Don't raise - continue with fallback mode
+            self._initialized = True
     
     async def classify_industry(self, text: str) -> Dict[str, float]:
         """
@@ -75,6 +70,10 @@ class TextClassifier:
         ]
         
         try:
+            # Fallback mode - use keyword-based classification
+            if self.industry_classifier is None:
+                return self._classify_industry_fallback(text)
+            
             # Limit text length for efficiency
             text_sample = text[:500]
             
@@ -92,7 +91,7 @@ class TextClassifier:
             return classifications
         except Exception as e:
             logger.error(f"Industry classification error: {e}")
-            return {}
+            return self._classify_industry_fallback(text)
     
     async def classify_job_role(self, text: str) -> Dict[str, float]:
         """
@@ -126,6 +125,10 @@ class TextClassifier:
         ]
         
         try:
+            # Fallback mode - use keyword-based classification
+            if self.job_role_classifier is None:
+                return self._classify_job_role_fallback(text)
+            
             text_sample = text[:500]
             
             result = self.job_role_classifier(
@@ -141,7 +144,7 @@ class TextClassifier:
             return classifications
         except Exception as e:
             logger.error(f"Job role classification error: {e}")
-            return {}
+            return self._classify_job_role_fallback(text)
     
     async def determine_career_level(self, text: str, years_of_experience: Optional[int] = None) -> str:
         """
@@ -190,6 +193,61 @@ class TextClassifier:
         
         # Default to mid if unclear
         return "mid"
+    
+    def _classify_industry_fallback(self, text: str) -> Dict[str, float]:
+        """Keyword-based industry classification fallback."""
+        text_lower = text.lower()
+        
+        industry_keywords = {
+            "Technology & Software": ["software", "programming", "developer", "tech", "coding", "python", "java", "javascript", "api", "cloud", "aws", "docker"],
+            "Finance & Banking": ["finance", "banking", "investment", "accounting", "financial", "trader", "analyst", "portfolio"],
+            "Healthcare & Medical": ["healthcare", "medical", "hospital", "doctor", "nurse", "patient", "clinical", "physician"],
+            "Retail & E-commerce": ["retail", "ecommerce", "sales", "customer", "store", "merchandise", "shopping"],
+            "Manufacturing": ["manufacturing", "production", "factory", "assembly", "industrial", "operations"],
+            "Education": ["education", "teacher", "professor", "university", "school", "teaching", "academic"],
+            "Consulting": ["consulting", "consultant", "advisory", "strategy", "management consulting"],
+            "Marketing & Advertising": ["marketing", "advertising", "brand", "campaign", "digital marketing", "seo", "social media"],
+        }
+        
+        results = {}
+        for industry, keywords in industry_keywords.items():
+            score = sum(1 for keyword in keywords if keyword in text_lower) / len(keywords)
+            if score > 0:
+                results[industry] = score
+        
+        # Normalize scores
+        if results:
+            total = sum(results.values())
+            results = {k: v / total for k, v in results.items()}
+        
+        return results
+    
+    def _classify_job_role_fallback(self, text: str) -> Dict[str, float]:
+        """Keyword-based job role classification fallback."""
+        text_lower = text.lower()
+        
+        role_keywords = {
+            "Software Engineer": ["software engineer", "developer", "programmer", "coding", "backend", "frontend"],
+            "Data Scientist": ["data scientist", "machine learning", "data analysis", "ml", "ai", "data mining"],
+            "Product Manager": ["product manager", "product management", "product owner", "roadmap"],
+            "DevOps Engineer": ["devops", "ci/cd", "kubernetes", "docker", "infrastructure", "deployment"],
+            "Full Stack Developer": ["full stack", "fullstack", "full-stack"],
+            "Business Analyst": ["business analyst", "requirements", "stakeholder", "business intelligence"],
+            "Project Manager": ["project manager", "project management", "scrum master", "agile", "pmp"],
+        }
+        
+        results = {}
+        for role, keywords in role_keywords.items():
+            score = sum(1 for keyword in keywords if keyword in text_lower) / len(keywords)
+            if score > 0:
+                results[role] = score
+        
+        # Normalize scores
+        if results:
+            total = sum(results.values())
+            results = {k: v / total for k, v in results.items()}
+        
+        return results
     
     async def classify_sentiment(self, text: str) -> Dict[str, Any]:
         """

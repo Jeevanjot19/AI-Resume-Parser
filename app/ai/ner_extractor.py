@@ -27,7 +27,7 @@ class NERExtractor:
         try:
             # Load spaCy model for fast NER
             logger.info("Loading spaCy model...")
-            self.spacy_nlp = spacy.load("en_core_web_sm")
+            self.spacy_nlp = spacy.load("en_core_web_lg")  # Use the large model we have installed
             
             # Load transformer model for complex NER
             logger.info("Loading transformer NER model...")
@@ -168,39 +168,155 @@ class NERExtractor:
         return re.findall(url_pattern, text)
     
     async def extract_skills(self, text: str) -> List[str]:
-        """Extract skills from text."""
+        """Extract skills from text with comprehensive keyword list."""
         if not self._initialized:
             await self.initialize()
         
-        # Predefined skill keywords (this should be expanded or use a skill taxonomy)
+        # Comprehensive skill keywords - EXPANDED
         skill_keywords = {
             # Programming languages
             "python", "java", "javascript", "typescript", "c++", "c#", "ruby", "php", "swift", "kotlin",
-            "go", "rust", "scala", "r", "matlab", "perl", "shell", "bash",
+            "go", "rust", "scala", "r", "matlab", "perl", "shell", "bash", "powershell", "objective-c",
+            "dart", "lua", "haskell", "elixir", "clojure", "groovy", "vb.net", "cobol", "fortran",
+            "assembly", "sql", "pl/sql", "t-sql", "vba", "scratch", "solidity",
             
-            # Frameworks & Libraries
-            "django", "flask", "fastapi", "react", "angular", "vue", "node.js", "express",
-            "spring", "hibernate", "tensorflow", "pytorch", "keras", "scikit-learn",
-            "pandas", "numpy", "matplotlib", "seaborn",
+            # Web Development
+            "html", "css", "sass", "scss", "less", "bootstrap", "tailwind", "material-ui", "mui",
+            "webpack", "vite", "parcel", "rollup", "babel", "jquery", "ajax", "xml", "json",
             
-            # Databases
-            "postgresql", "mysql", "mongodb", "redis", "elasticsearch", "cassandra",
-            "dynamodb", "oracle", "sql server", "sqlite",
+            # Frontend Frameworks & Libraries
+            "react", "react.js", "angular", "vue", "vue.js", "svelte", "next.js", "nuxt.js", "gatsby",
+            "ember", "backbone", "knockout", "polymer", "web components", "pwa", "redux", "mobx",
+            "recoil", "zustand", "react native", "ionic", "flutter", "xamarin",
             
-            # Cloud & DevOps
-            "aws", "azure", "gcp", "docker", "kubernetes", "jenkins", "gitlab ci",
-            "terraform", "ansible", "ci/cd",
+            # Backend Frameworks
+            "django", "flask", "fastapi", "express", "express.js", "node.js", "spring", "spring boot",
+            "hibernate", "asp.net", ".net core", "laravel", "symfony", "rails", "ruby on rails",
+            "sinatra", "gin", "echo", "fiber", "nestjs", "koa", "hapi", "meteor",
             
-            # Other tech skills
-            "git", "linux", "agile", "scrum", "rest api", "graphql", "microservices",
-            "machine learning", "deep learning", "nlp", "computer vision"
+            # Data Science & ML
+            "tensorflow", "pytorch", "keras", "scikit-learn", "pandas", "numpy", "scipy", "matplotlib",
+            "seaborn", "plotly", "bokeh", "statsmodels", "xgboost", "lightgbm", "catboost",
+            "opencv", "nltk", "spacy", "gensim", "hugging face", "transformers", "bert", "gpt",
+            "machine learning", "deep learning", "nlp", "computer vision", "neural networks",
+            "cnn", "rnn", "lstm", "gan", "reinforcement learning", "supervised learning",
+            "unsupervised learning", "classification", "regression", "clustering", "dimensionality reduction",
+            
+            # Databases - SQL
+            "postgresql", "mysql", "mariadb", "oracle", "sql server", "mssql", "sqlite", "db2",
+            "sybase", "teradata", "snowflake", "redshift", "bigquery",
+            
+            # Databases - NoSQL
+            "mongodb", "redis", "cassandra", "couchdb", "dynamodb", "neo4j", "orientdb",
+            "arangodb", "rethinkdb", "firebase", "firestore", "hbase", "couchbase",
+            
+            # Search & Analytics
+            "elasticsearch", "solr", "sphinx", "algolia", "opensearch", "kibana", "grafana",
+            "tableau", "power bi", "looker", "metabase", "superset",
+            
+            # Cloud Platforms
+            "aws", "amazon web services", "ec2", "s3", "lambda", "rds", "dynamodb", "cloudfront",
+            "azure", "microsoft azure", "azure devops", "gcp", "google cloud", "google cloud platform",
+            "firebase", "heroku", "digitalocean", "linode", "vultr", "ibm cloud", "oracle cloud",
+            
+            # Cloud Services
+            "cloudformation", "terraform", "pulumi", "serverless", "api gateway", "cloud functions",
+            "cloud run", "app engine", "elastic beanstalk", "ecs", "eks", "aks", "gke",
+            
+            # DevOps & CI/CD
+            "docker", "kubernetes", "k8s", "jenkins", "gitlab ci", "github actions", "circleci",
+            "travis ci", "bamboo", "teamcity", "argocd", "flux", "spinnaker", "helm", "kustomize",
+            "vagrant", "packer", "consul", "vault", "prometheus", "datadog", "new relic",
+            "splunk", "nagios", "zabbix", "elk stack", "fluentd", "logstash",
+            
+            # Infrastructure as Code
+            "terraform", "ansible", "puppet", "chef", "saltstack", "cloudformation", "arm templates",
+            
+            # Version Control
+            "git", "github", "gitlab", "bitbucket", "svn", "mercurial", "perforce", "cvs",
+            "git flow", "github flow", "trunk based development",
+            
+            # Testing
+            "junit", "pytest", "unittest", "nose", "jest", "mocha", "chai", "jasmine", "karma",
+            "selenium", "cypress", "playwright", "puppeteer", "testcafe", "cucumber", "behave",
+            "rspec", "minitest", "phpunit", "nunit", "xunit", "postman", "insomnia", "jmeter",
+            "locust", "k6", "test driven development", "tdd", "bdd", "integration testing",
+            "unit testing", "e2e testing", "load testing", "performance testing",
+            
+            # Architecture & Patterns
+            "microservices", "monolith", "soa", "event driven", "cqrs", "event sourcing",
+            "rest api", "restful", "graphql", "grpc", "soap", "websocket", "sse", "mqtt",
+            "api design", "system design", "design patterns", "mvc", "mvvm", "clean architecture",
+            "hexagonal architecture", "domain driven design", "ddd", "solid principles",
+            
+            # Message Queues & Streaming
+            "kafka", "rabbitmq", "activemq", "zeromq", "nats", "pulsar", "kinesis", "pub/sub",
+            "redis streams", "sqs", "sns", "azure service bus", "event hub",
+            
+            # Monitoring & Logging
+            "prometheus", "grafana", "datadog", "new relic", "splunk", "elk", "elasticsearch",
+            "logstash", "kibana", "fluentd", "sentry", "rollbar", "bugsnag", "cloudwatch",
+            "stackdriver", "azure monitor", "application insights",
+            
+            # Security
+            "oauth", "jwt", "saml", "openid", "ssl", "tls", "https", "encryption", "hashing",
+            "penetration testing", "vulnerability assessment", "owasp", "security scanning",
+            "sonarqube", "snyk", "veracode", "checkmarx", "iam", "rbac", "authentication",
+            "authorization", "firewall", "waf", "vpn", "zero trust",
+            
+            # Mobile Development
+            "android", "ios", "react native", "flutter", "xamarin", "ionic", "cordova",
+            "swift", "kotlin", "objective-c", "java android", "swiftui", "jetpack compose",
+            
+            # Game Development
+            "unity", "unreal engine", "godot", "pygame", "phaser", "three.js", "webgl", "opengl",
+            "directx", "vulkan", "c# unity", "blueprints",
+            
+            # Big Data
+            "hadoop", "spark", "hive", "pig", "hdfs", "mapreduce", "yarn", "flink", "storm",
+            "presto", "impala", "databricks", "airflow", "luigi", "prefect", "dagster",
+            "data pipeline", "etl", "elt", "data warehouse", "data lake", "lakehouse",
+            
+            # Blockchain
+            "blockchain", "ethereum", "solidity", "smart contracts", "web3", "defi", "nft",
+            "hyperledger", "bitcoin", "cryptocurrency", "consensus algorithms",
+            
+            # Operating Systems
+            "linux", "unix", "ubuntu", "centos", "rhel", "debian", "fedora", "arch",
+            "windows server", "macos", "freebsd", "solaris",
+            
+            # Methodologies
+            "agile", "scrum", "kanban", "lean", "waterfall", "extreme programming", "xp",
+            "safe", "devops", "devsecops", "gitops", "sre", "site reliability engineering",
+            "incident management", "on-call", "postmortem", "retrospective", "sprint planning",
+            
+            # Other Technologies
+            "redis", "memcached", "nginx", "apache", "tomcat", "iis", "load balancing",
+            "cdn", "cloudflare", "akamai", "fastly", "caching", "session management",
+            "webscraping", "beautifulsoup", "scrapy", "regex", "cron", "batch processing",
+            "real-time processing", "streaming", "async", "multi-threading", "concurrency",
+            "parallel processing", "distributed systems", "high availability", "fault tolerance",
+            "disaster recovery", "backup", "replication", "sharding", "partitioning",
+            
+            # Business & Productivity Tools
+            "jira", "confluence", "slack", "microsoft teams", "notion", "asana", "trello",
+            "monday.com", "basecamp", "office 365", "google workspace", "sharepoint",
+            "salesforce", "hubspot", "zendesk", "servicenow",
+            
+            # Soft Skills (commonly mentioned)
+            "leadership", "communication", "problem solving", "teamwork", "collaboration",
+            "project management", "time management", "critical thinking", "analytical thinking"
         }
         
         text_lower = text.lower()
         found_skills = []
         
+        # Check each skill keyword
         for skill in skill_keywords:
-            if skill in text_lower:
+            # Use word boundaries for better matching
+            pattern = r'\b' + re.escape(skill) + r'\b'
+            if re.search(pattern, text_lower):
+                # Capitalize properly
                 found_skills.append(skill.title())
         
         return list(set(found_skills))

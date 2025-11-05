@@ -69,6 +69,10 @@ class SearchClient:
     
     async def index_resume(self, resume_id: str, document: Dict[str, Any]):
         """Index a resume document."""
+        if self.client is None:
+            logger.warning(f"Elasticsearch not available, skipping indexing for resume {resume_id}")
+            return
+            
         try:
             await self.client.index(
                 index=RESUME_INDEX,
@@ -78,7 +82,8 @@ class SearchClient:
             logger.info(f"Indexed resume: {resume_id}")
         except Exception as e:
             logger.error(f"Error indexing resume {resume_id}: {e}")
-            raise
+            # Don't raise - make ES indexing optional
+            logger.warning(f"Elasticsearch indexing failed for {resume_id}, continuing without ES")
     
     async def search_resumes(
         self,

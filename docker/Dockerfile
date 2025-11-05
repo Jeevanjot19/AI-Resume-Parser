@@ -4,7 +4,6 @@ FROM python:3.11-slim as builder
 RUN apt-get update && apt-get install -y \
     build-essential \
     curl \
-    software-properties-common \
     git \
     && rm -rf /var/lib/apt/lists/*
 
@@ -29,6 +28,8 @@ RUN apt-get update && apt-get install -y \
     tesseract-ocr \
     tesseract-ocr-eng \
     poppler-utils \
+    libmagic1 \
+    file \
     libpq-dev \
     default-jre \
     curl \

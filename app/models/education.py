@@ -5,8 +5,8 @@ Education model.
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Column, String, ForeignKey, DateTime, Numeric
-from sqlalchemy.dialects.postgresql import UUID, ARRAY
+from sqlalchemy import Column, String, ForeignKey, DateTime, Numeric, JSON
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
 from app.db.base_class import Base
@@ -26,10 +26,11 @@ class Education(Base):
     location = Column(String(255))
     graduation_date = Column(DateTime)
     gpa = Column(Numeric(3, 2))  # e.g., 3.75
-    honors = Column(ARRAY(String))  # Array of honors/awards
+    honors = Column(JSON)  # Array of honors/awards
     
     resume = relationship("Resume", back_populates="education")
     created_at = Column(DateTime, default=datetime.utcnow)
     
     def __repr__(self):
         return f"<Education(id={self.id}, degree={self.degree}, institution={self.institution})>"
+

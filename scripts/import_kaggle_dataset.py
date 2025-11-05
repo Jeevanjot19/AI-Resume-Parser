@@ -9,6 +9,7 @@ import asyncio
 from pathlib import Path
 from loguru import logger
 import sys
+from datetime import datetime
 
 # Add parent directory to path
 sys.path.append(str(Path(__file__).parent.parent))
@@ -55,8 +56,18 @@ async def import_kaggle_dataset():
     logger.info("\nSample data:")
     logger.info(df.head(2))
     
-    # Initialize services
-    parser = ResumeParserService()
+    # Count existing resumes before import
+    async with AsyncSessionLocal() as db:
+        from sqlalchemy import select, func
+        result = await db.execute(select(func.count(Resume.id)))
+        initial_count = result.scalar()
+    
+    logger.info(f"\n{'='*60}")
+    logger.info(f"Resumes already in database: {initial_count}")
+    logger.info(f"{'='*60}\n")
+    
+    # Initialize services (disable Tika)
+    parser = ResumeParserService(use_tika=False)  # Fixed: disable Tika
     enhancer = AIEnhancerService()
     search_client = SearchClient()
     
@@ -66,6 +77,7 @@ async def import_kaggle_dataset():
     # Process each resume
     processed_count = 0
     failed_count = 0
+    skipped_count = 0
     
     async with AsyncSessionLocal() as db:
         for idx, row in df.iterrows():
@@ -108,20 +120,31 @@ async def import_kaggle_dataset():
                 # Parse resume using the actual file
                 parsed_data = await parser.parse_resume(file_path, db)
                 
+                # Check if resume already exists by file_hash
+                file_hash = parsed_data.get('file_hash')
+                from sqlalchemy import select
+                existing_resume = await db.execute(
+                    select(Resume).where(Resume.file_hash == file_hash)
+                )
+                if existing_resume.scalar_one_or_none():
+                    logger.info(f"⊙ Resume {idx + 1} already exists (hash: {file_hash[:16]}...), skipping")
+                    skipped_count += 1
+                    continue
+                
                 # Create resume record
                 resume = Resume(
                     file_name=file_path.name,
                     file_type=file_type,
                     file_size=file_path.stat().st_size if file_path.exists() else len(resume_text),
-                    file_path=str(file_path),
-                    file_hash=parsed_data.get('file_hash'),
+                    file_hash=file_hash,
                     raw_text=resume_text,  # Use CSV text as fallback
                     structured_data=parsed_data.get('structured_data'),
                     processing_status=ProcessingStatus.COMPLETED,
-                    metadata={
+                    file_metadata={
                         'source': 'kaggle',
                         'category': category,
                         'index': idx,
+                        'original_file_path': str(file_path),
                         'has_actual_file': file_path != temp_file if 'temp_file' in locals() else True
                     }
                 )
@@ -141,24 +164,35 @@ async def import_kaggle_dataset():
                 # Update resume with enhancements
                 resume.ai_enhancements = enhancements
                 
-                # Index in Elasticsearch
-                logger.info(f"Indexing resume {resume.id} in Elasticsearch...")
-                await search_client.index_resume(
-                    resume_id=resume.id,
-                    text=parsed_data.get('raw_text', resume_text),
-                    structured_data=parsed_data.get('structured_data', {}),
-                    embedding=parsed_data.get('embedding', [])
-                )
+                # Index in Elasticsearch (optional - skip if not available)
+                try:
+                    logger.info(f"Indexing resume {resume.id} in Elasticsearch...")
+                    await search_client.index_resume(
+                        resume_id=str(resume.id),
+                        document={
+                            'text': parsed_data.get('raw_text', resume_text),
+                            'structured_data': parsed_data.get('structured_data', {}),
+                            'embedding': parsed_data.get('embedding', []),
+                            'metadata': {
+                                'category': category,
+                                'filename': file_path.name if file_path else f'resume_{idx}.txt',
+                                'processed_at': datetime.utcnow().isoformat()
+                            }
+                        }
+                    )
+                except Exception as es_error:
+                    logger.warning(f"Elasticsearch indexing skipped (not running): {es_error}")
                 
                 await db.commit()
                 
                 processed_count += 1
-                logger.info(f"✓ Resume {idx} processed successfully (ID: {resume.id})")
+                logger.info(f"✓ Resume {idx + 1} processed successfully (ID: {resume.id})")
                 
-                # Limit for testing
-                if processed_count >= 50:  # Process first 50 resumes
-                    logger.info(f"\nReached processing limit of 50 resumes")
-                    break
+                # Progress update every 5 resumes
+                if processed_count % 5 == 0:
+                    logger.info(f"\n{'='*60}")
+                    logger.info(f"Progress: {processed_count} resumes processed so far...")
+                    logger.info(f"{'='*60}\n")
                 
             except Exception as e:
                 logger.error(f"✗ Failed to process resume {idx}: {e}")
@@ -166,12 +200,22 @@ async def import_kaggle_dataset():
                 await db.rollback()
                 continue
     
+    # Get final count
+    async with AsyncSessionLocal() as db:
+        from sqlalchemy import select, func
+        result = await db.execute(select(func.count(Resume.id)))
+        final_count = result.scalar()
+    
     logger.info("\n" + "="*60)
     logger.info("Dataset Import Summary")
     logger.info("="*60)
-    logger.info(f"Total resumes in dataset: {len(df)}")
-    logger.info(f"Successfully processed: {processed_count}")
-    logger.info(f"Failed: {failed_count}")
+    logger.info(f"Total resumes in Kaggle dataset: {len(df)}")
+    logger.info(f"Resumes before this import: {initial_count}")
+    logger.info(f"Successfully processed (this run): {processed_count}")
+    logger.info(f"Skipped (duplicates): {skipped_count}")
+    logger.info(f"Failed (this run): {failed_count}")
+    logger.info(f"Total resumes in database now: {final_count}")
+    logger.info(f"New resumes added: {final_count - initial_count}")
     logger.info(f"Processing mode: {'With actual files' if has_resume_files else 'Text-only from CSV'}")
     logger.info("="*60)
 
@@ -195,10 +239,20 @@ async def verify_import():
         
         logger.info("\nSample resumes:")
         for resume in resumes:
-            logger.info(f"- {resume.id}: {resume.file_name} (Category: {resume.metadata.get('category', 'N/A')})")
+            # file_metadata is already a dict (JSON field)
+            category = resume.file_metadata.get('category', 'N/A') if resume.file_metadata else 'N/A'
+            logger.info(f"- {resume.id}: {resume.file_name} (Category: {category})")
             if resume.structured_data:
-                skills = resume.structured_data.get('skills', [])
-                logger.info(f"  Skills: {skills[:5] if len(skills) > 5 else skills}")
+                skills_data = resume.structured_data.get('skills', {})
+                # Skills is a dict with categories, get all skills as a flat list
+                if isinstance(skills_data, dict):
+                    all_skills = []
+                    for category_skills in skills_data.values():
+                        if isinstance(category_skills, list):
+                            all_skills.extend(category_skills)
+                    logger.info(f"  Skills ({len(all_skills)}): {all_skills[:5] if len(all_skills) > 5 else all_skills}")
+                else:
+                    logger.info(f"  Skills: {skills_data}")
 
 
 if __name__ == "__main__":

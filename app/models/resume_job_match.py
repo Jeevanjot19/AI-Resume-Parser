@@ -6,8 +6,8 @@ import uuid
 from datetime import datetime
 from decimal import Decimal
 
-from sqlalchemy import Column, Integer, String, Text, ForeignKey, DateTime, Numeric, CheckConstraint
-from sqlalchemy.dialects.postgresql import UUID, JSONB, ARRAY
+from sqlalchemy import Column, Integer, String, Text, ForeignKey, DateTime, Numeric, CheckConstraint, JSON
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
 from app.db.base_class import Base
@@ -30,7 +30,7 @@ class ResumeJobMatch(Base):
     job_title = Column(String(255), nullable=False, index=True)
     company_name = Column(String(255), nullable=True)
     job_description = Column(Text, nullable=False)
-    job_requirements = Column(JSONB, nullable=True)  # Structured job requirements
+    job_requirements = Column(JSON, nullable=True)  # Structured job requirements
     
     # Match scores
     overall_score = Column(
@@ -47,15 +47,15 @@ class ResumeJobMatch(Base):
     recommendation = Column(String(50), nullable=True)  # e.g., "Strong Match", "Good Match"
     
     # Detailed breakdown
-    category_scores = Column(JSONB, nullable=True)  # Skills, experience, education scores
-    strength_areas = Column(ARRAY(Text), nullable=True)  # Candidate's strengths
-    gap_analysis = Column(JSONB, nullable=True)  # Missing skills, experience gaps
-    salary_alignment = Column(JSONB, nullable=True)  # Salary range comparison
-    competitive_advantages = Column(ARRAY(Text), nullable=True)  # Unique selling points
+    category_scores = Column(JSON, nullable=True)  # Skills, experience, education scores
+    strength_areas = Column(JSON, nullable=True)  # Candidate's strengths
+    gap_analysis = Column(JSON, nullable=True)  # Missing skills, experience gaps
+    salary_alignment = Column(JSON, nullable=True)  # Salary range comparison
+    competitive_advantages = Column(JSON, nullable=True)  # Unique selling points
     
     # AI explanation
-    explanation = Column(JSONB, nullable=True)  # Detailed match explanation
-    processing_metadata = Column(JSONB, nullable=True)  # Algorithm version, processing time, etc.
+    explanation = Column(JSON, nullable=True)  # Detailed match explanation
+    processing_metadata = Column(JSON, nullable=True)  # Algorithm version, processing time, etc.
     
     # Relationships
     resume = relationship("Resume", back_populates="job_matches")
@@ -64,3 +64,4 @@ class ResumeJobMatch(Base):
     
     def __repr__(self):
         return f"<ResumeJobMatch(id={self.id}, job={self.job_title}, score={self.overall_score})>"
+

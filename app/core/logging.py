@@ -84,17 +84,20 @@ def setup_logging() -> None:
         logging.getLogger(name).handlers = []
         logging.getLogger(name).propagate = True
 
+    # Define simple log format without request_id (can be added later via middleware)
+    log_format = "<level>{level: <8}</level> <green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> <cyan>{name}</cyan>:<cyan>{function}</cyan> - <level>{message}</level>"
+    
     # Configure loguru
     logger.configure(
         handlers=[
             {
                 "sink": sys.stdout,
-                "format": LogConfig.LOG_FORMAT,
+                "format": log_format,
                 "level": settings.LOG_LEVEL,
             },
             {
                 "sink": "logs/app.log",
-                "format": LogConfig.LOG_FORMAT,
+                "format": log_format,
                 "level": settings.LOG_LEVEL,
                 "rotation": "10 MB",
                 "retention": "1 week",

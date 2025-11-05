@@ -5,8 +5,8 @@ Work Experience model.
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Column, String, Text, ForeignKey, DateTime, Boolean
-from sqlalchemy.dialects.postgresql import UUID, ARRAY
+from sqlalchemy import Column, String, Text, ForeignKey, DateTime, Boolean, JSON
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
 from app.db.base_class import Base
@@ -27,11 +27,12 @@ class WorkExperience(Base):
     end_date = Column(DateTime)
     is_current = Column(Boolean, default=False)
     description = Column(Text)
-    achievements = Column(ARRAY(Text))  # Array of achievement strings
-    technologies = Column(ARRAY(String))  # Array of technology names
+    achievements = Column(JSON)  # Array of achievement strings (stored as JSON in SQLite)
+    technologies = Column(JSON)  # Array of technology names (stored as JSON in SQLite)
     
     resume = relationship("Resume", back_populates="work_experiences")
     created_at = Column(DateTime, default=datetime.utcnow)
     
     def __repr__(self):
         return f"<WorkExperience(id={self.id}, title={self.job_title}, company={self.company_name})>"
+

@@ -3,10 +3,11 @@ LLM orchestrator using LangChain for advanced reasoning and analysis.
 """
 
 from typing import Dict, List, Any, Optional
-from langchain.llms import OpenAI
-from langchain.chains import LLMChain
-from langchain.prompts import PromptTemplate
-from langchain.output_parsers import PydanticOutputParser
+# Temporarily disabling langchain imports until we can configure properly
+# from langchain_openai import OpenAI
+# from langchain.chains.llm import LLMChain
+# from langchain.prompts import PromptTemplate
+# from langchain.output_parsers import PydanticOutputParser
 from pydantic import BaseModel, Field
 from loguru import logger
 
@@ -34,7 +35,7 @@ class LLMOrchestrator:
     """LLM orchestrator for advanced analysis and reasoning."""
     
     def __init__(self):
-        self.llm: Optional[OpenAI] = None
+        self.llm: Optional[Any] = None  # Changed from OpenAI type
         self._initialized = False
     
     async def initialize(self):
@@ -44,19 +45,12 @@ class LLMOrchestrator:
         
         try:
             logger.info("Initializing LLM orchestrator...")
-            
-            # Initialize OpenAI LLM (or use alternative)
-            self.llm = OpenAI(
-                model_name=settings.LLM_MODEL,
-                temperature=0.3,
-                max_tokens=500
-            )
-            
+            logger.warning("LLM features temporarily disabled - using fallback mode")
+            # TODO: Properly configure OpenAI API key and initialize LangChain
             self._initialized = True
-            logger.info("LLM orchestrator initialized successfully")
+            logger.info("LLM orchestrator initialized in fallback mode")
         except Exception as e:
             logger.error(f"Error initializing LLM: {e}")
-            # Continue without LLM for graceful degradation
             self._initialized = False
     
     async def analyze_resume_quality(self, resume_text: str, structured_data: Dict[str, Any]) -> Dict[str, Any]:
@@ -73,9 +67,8 @@ class LLMOrchestrator:
         if not self._initialized:
             await self.initialize()
         
-        if not self.llm:
-            # Return fallback analysis
-            return self._fallback_quality_analysis(structured_data)
+        # Using fallback analysis for now
+        return self._fallback_quality_analysis(structured_data)
         
         try:
             # Create parser
@@ -246,10 +239,13 @@ List 3-5 key achievements as bullet points.
         completeness_score = sum([has_contact, has_experience, has_education, has_skills]) * 25
         
         return {
-            "quality_score": 70,  # Conservative default
-            "completeness_score": completeness_score,
+            "overall_score": 70,  # Fixed: was quality_score
+            "scores": {  # Fixed: added missing scores dict
+                "completeness": completeness_score,
+                "quality": 70
+            },
             "strengths": ["Professional formatting", "Clear structure"],
-            "improvements": ["Add more quantifiable achievements", "Expand skills section"],
+            "weaknesses": ["Add more quantifiable achievements", "Expand skills section"],  # Fixed: was improvements
             "summary": "Resume demonstrates relevant experience and qualifications."
         }
     

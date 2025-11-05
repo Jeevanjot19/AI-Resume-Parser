@@ -5,7 +5,7 @@ Skills model.
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Column, String, Integer, ForeignKey, DateTime, Boolean
+from sqlalchemy import Column, String, Integer, ForeignKey, DateTime, Boolean, JSON
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
@@ -31,3 +31,4 @@ class Skill(Base):
     
     def __repr__(self):
         return f"<Skill(id={self.id}, name={self.skill_name}, category={self.skill_category})>"
+
